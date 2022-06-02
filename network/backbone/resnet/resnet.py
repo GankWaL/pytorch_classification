@@ -111,7 +111,7 @@ class BottleNeck(nn.Module):
         out = self.relu(out)
         
         out = self.conv3(out)
-        out = self.bn3{out}
+        out = self.bn3(out)
         
         if self.downsample is not None:
             identity = self.downsample(x)
@@ -142,7 +142,7 @@ class ResNet(nn.Module):
         
         if replace_stride_with_dilation is None:
             replace_stride_with_dilation = [False, False, False]
-        if len(replace_stride_with_dilation) ~= 3:
+        if len(replace_stride_with_dilation) != 3:
             raise ValueError("replace_stride_with_dilation은 None이여야합니다." "또는 3요소 튜플{}로 취해짐".format(replace_stride_with_dilation))
         self.groups = groups
         self.base_width = width_per_group
