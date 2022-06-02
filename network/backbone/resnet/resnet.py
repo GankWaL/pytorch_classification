@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
-from torch.utils import load_state_dict_from_url
 
 def conv3x3(in_planes, out_planes, stride = 1, groups = 1, dilation = 1):
     return nn.Conv2d(
@@ -48,7 +48,7 @@ class BasicBlock(nn.Module):
         
         self.conv1 = conv3x3(inplanes, planes, stride)
         self.bn1 = norm_layer(inplanes, planes, stride)
-        self.relu = nn.ReLU(inplane=True)
+        self.relu = nn.ReLU(inplace=True)
         self.conv2 = conv3x3(planes, planes)
         self.bn2 = norm_layer(planes)
         self.downsample = downsample
@@ -97,6 +97,7 @@ class BottleNeck(nn.Module):
         self.conv3 = conv1x1(width, planes * self.expansion)
         self.bn3 = norm_layer(planes * self.expansion)
         self.relu = nn.ReLU(inplace = True)
+        self.downsample = downsample
         self.stride = stride
         
     def forward(self, x):
@@ -171,43 +172,59 @@ class ResNet(nn.Module):
                 elif isinstance(m, BasicBlock):
                     nn.init.constant_(m.bn2.weight, 0)
                     
-        def _make_layer(self, block, planes, blocks, stride = 1, dilate = False):
-            norm_layer = self._norm_layer
-            downsample = None
-            previous_dilation = self.dilation
-            if dilate:
-                self.dilation *= stride
-                stride = 1
-            if stride != 1 or self.inplanes != planes * block.expansion:
-                downsample = nn.Sequential(
-                    conv1x1(self.inplanes, planes * block.expansion, stride),
-                    norm_layer(planes * block.expansion),
-                )
-            
-            layers = []
-            layers.append(block(self.inplanes, planes, stride, downsample, self.groups, self.base_width, previous_dilation, norm_layer))
-            self.inplanes = planes * block.expansion
-            for _ in range(1, blocks):
-                layers.append(block(self.inplanes, planes, group = self.groups, base_width = self.base_width, dilation = self.dilation, norm_layer = norm_layer))
-            
-            return nn.Sequential(*layers)
+    def _make_layer(self, block, planes, blocks, stride = 1, dilate = False):
+        norm_layer = self._norm_layer
+        downsample = None
+        previous_dilation = self.dilation
+        if dilate:
+            self.dilation *= stride
+            stride = 1
+        if stride != 1 or self.inplanes != planes * block.expansion:
+            downsample = nn.Sequential(
+                conv1x1(self.inplanes, planes * block.expansion, stride),
+                norm_layer(planes * block.expansion),
+            )
         
-        def _forward_impl(self, x):
-            x = self.conv1(x)
-            x = self.bn1(x)
-            x = self.relu(x)
-            x = self.maxpool(x)
-            
-            x = self.layer1(x)
-            x = self.layer2(x)
-            x = self.layer3(x)
-            x = self.layer4(x)
-            
-            x = self.avgpool(x)
-            x = torch.flatten(x, 1)
-            x = self.fc(x)
-            
-            return x
+        layers = []
+        layers.append(block(self.inplanes, planes, stride, downsample, self.groups, self.base_width, previous_dilation, norm_layer))
+        self.inplanes = planes * block.expansion
+        for _ in range(1, blocks):
+            layers.append(block(self.inplanes, planes, groups = self.groups, base_width = self.base_width, dilation = self.dilation, norm_layer = norm_layer))
         
-        def forward(self, x):
-            return self._forward_impl(x)
+        return nn.Sequential(*layers)
+        
+    def _forward_impl(self, x):
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.relu(x)
+        x = self.maxpool(x)
+
+        x = self.layer1(x)
+        x = self.layer2(x)
+        x = self.layer3(x)
+        x = self.layer4(x)
+
+        x = self.avgpool(x)
+        x = torch.flatten(x, 1)
+        x = self.fc(x)
+
+        return x
+
+    def forward(self, x):
+        return self._forward_impl(x)
+    
+def _resnet(arch, block, layers):
+    model = ResNet(block, layers)
+    return model
+
+def resnet18():
+    return _resnet('resnet18', BasicBlock, [2, 2, 2, 2])
+
+def resnet34():
+    return _resnet('resnet34', BasicBlock, [3, 4, 6, 3])
+
+def resnet50():
+    return _resnet('resnet50', BottleNeck, [3, 4, 6, 3])
+
+def resnet101():
+    return _resnet('resnet101', BottleNeck, [3, 4, 23, 3])
