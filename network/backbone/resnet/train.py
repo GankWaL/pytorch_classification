@@ -12,18 +12,18 @@ from torchsummary import summary
 from torch import optim
 from torch.optim.lr_scheduler import StepLR, ReduceLROnPlateau
 from zmq import device
-from resnet import resnet18, resnet34, resnet50, resnet101
+from resnet import resnet34, resnet50
 from dataloader import data_transform, train_ds, val_ds
 
 USE_CUDA = torch.cuda.is_available()
 device = torch.device('cuda:0' if USE_CUDA else 'cpu')
 print('CUDA 사용 확인:', device)
-model = resnet18().to(device)
+model = resnet50().to(device)
 
 loss_func = nn.CrossEntropyLoss(reduction='sum')
 opt = optim.Adam(model.parameters(), lr = 0.001)
 lr_scheduler = ReduceLROnPlateau(opt, mode='min', factor=0.1, patience=10)
-train_dl, val_dl =  data_transform(train_ds, val_ds)
+train_dl, val_dl = data_transform(train_ds, val_ds)
 
 def get_lr(opt):
     for param_group in opt.param_groups:
@@ -105,7 +105,7 @@ def train_val(model, params):
 
         if val_loss < best_loss:
             best_loss = val_loss
-            print('최선의 val_loss 구하기')
+            print('가장 좋은 지표의 val_loss')
 
         lr_scheduler.step(val_loss)
 
@@ -115,7 +115,7 @@ def train_val(model, params):
     return model, loss_history, metric_history
 
 params_train = {
-    'num_epochs':20,
+    'num_epochs':200,
     'optimizer':opt,
     'loss_func':loss_func,
     'train_dl':train_dl,
@@ -132,5 +132,24 @@ def createFolder(directory):
     except OSerror:
         print('Error')
 createFolder('./models')
+createFolder('./graphs')
 
-train_val(model, params_train)
+model, loss_hist, metric_hist = train_val(model, params_train)
+
+num_epochs=params_train["num_epochs"]
+
+plt.title("Train-Val Loss")
+plt.plot(range(1,num_epochs+1),loss_hist["train"],label="train")
+plt.plot(range(1,num_epochs+1),loss_hist["val"],label="val")
+plt.ylabel("Loss")
+plt.xlabel("Training Epochs")
+plt.legend()
+plt.savefig("./graphs/Train-val_Loss_graph.png")
+
+plt.title("Train-Val Accuracy")
+plt.plot(range(1,num_epochs+1),metric_hist["train"],label="train")
+plt.plot(range(1,num_epochs+1),metric_hist["val"],label="val")
+plt.ylabel("Accuracy")
+plt.xlabel("Training Epochs")
+plt.legend()
+plt.savefig("./graphs/Train-val_Accuracy_graph.png")

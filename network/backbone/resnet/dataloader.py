@@ -52,7 +52,7 @@ def data_transform(train_ds, val_ds):
     train_ds.transform = train_transformation
     val_ds.transform = val_transformation
 
-    train_dl = DataLoader(train_ds, batch_size=32, shuffle=True)
-    val_dl = DataLoader(val_ds, batch_size=32, shuffle=True)
+    train_dl = DataLoader(train_ds, batch_size=16, shuffle=True)
+    val_dl = DataLoader(val_ds, batch_size=16, shuffle=True)
     
     return train_dl, val_dl
