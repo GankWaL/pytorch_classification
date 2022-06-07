@@ -71,6 +71,7 @@ def loss_epoch(model, loss_func, dataset_dl, sanity_check=False, opt=None):
     return loss, metric
 
 def train_val(model, params):
+    
     num_epochs=params['num_epochs']
     loss_func=params["loss_func"]
     opt=params["optimizer"]
@@ -78,16 +79,24 @@ def train_val(model, params):
     val_dl=params["val_dl"]
     sanity_check=params["sanity_check"]
     lr_scheduler=params["lr_scheduler"]
-    path2weights=params["path2weights"]
+    path2checkpoints=params["path2checkpoints"]
 
     loss_history = {'train': [], 'val': []}
     metric_history = {'train': [], 'val': []}
-
+    
+    if os.path.isfile(path2checkpoints):
+        checkpoint = torch.load(path2checkpoints)
+        model.load_state_dict(checkpoint["model_state_dict"])
+        optim.load_state_dict(checkpoint["optimizer_state_dict"])
+        checkpoint_epoch = checkpoint["epoch"]
+        checkpoint_description = checkpoint["description"]
 
     best_loss = float('inf')
 
     start_time = time.time()
-
+    
+    checkpoint = 1
+    
     for epoch in range(num_epochs):
         current_lr = get_lr(opt)
         print('Epoch {}/{}, current lr={}'.format(epoch, num_epochs-1, current_lr))
@@ -111,25 +120,39 @@ def train_val(model, params):
 
         print('train loss: %.6f, val loss: %.6f, accuracy: %.2f, time: %.4f min' %(train_loss, val_loss, 100*val_metric, (time.time()-start_time)/60))
         print('-'*10)
+        
+    if (epoch + 1) % 100 == 0:
+        torch.save(
+            {
+                "model": "ResNet50",
+                "epoch": epoch,
+                "model_state_dict": model.state_dict(),
+                "optimizer_state_dict": optim.state_dict(),
+                "loss": train_loss,
+                "description": f"resnet50_checkpoint_{checkpoint}",
+            },
+            path2checkpoints,
+        )
+        checkpoint += 1
 
     return model, loss_history, metric_history
 
 params_train = {
-    'num_epochs':200,
+    'num_epochs':1000,
     'optimizer':opt,
     'loss_func':loss_func,
     'train_dl':train_dl,
     'val_dl':val_dl,
     'sanity_check':False,
     'lr_scheduler':lr_scheduler,
-    'path2weights':'./models/weights.pt',
+    'path2checkpoints':'./models/checkpoint_{checkpoint}.pt',
 }
 
 def createFolder(directory):
     try:
         if not os.path.exists(directory):
             os.makedirs(directory)
-    except OSerror:
+    except OSError:
         print('Error')
 createFolder('./models')
 createFolder('./graphs')
