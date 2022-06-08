@@ -11,13 +11,13 @@ from torchsummary import summary
 from torch import optim
 from torch.optim.lr_scheduler import StepLR, ReduceLROnPlateau
 from zmq import device
-from resnet import resnet34, resnet50
-from dataloader import data_transform, train_ds, val_ds
+from resnet import *
+from dataloader import *
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 if device == 'cpu':
     print('Warnning: CPU로 학습할 시 속도가 많이 느림')
-model = resnet50().to(device)
+model = resnet34().to(device)
 
 loss_func = nn.CrossEntropyLoss(reduction='sum')
 opt = optim.Adam(model.parameters(), lr = 0.001)
@@ -120,18 +120,18 @@ def train_val(model, params):
         print('train loss: %.6f, val loss: %.6f, accuracy: %.2f, time: %.4f min' %(train_loss, val_loss, 100*val_metric, (time.time()-start_time)/60))
         print('-'*10)
         
-    if (epoch + 1) % 50 == 0:
-        torch.save(
-            {
-                "model": "ResNet50",
-                "epoch": epoch,
-                "model_state_dict": model.state_dict(),
-                "optimizer_state_dict": optim.state_dict(),
-                "loss": train_loss,
-                "description": f"resnet50_checkpoint_{epoch}",
-            },
-            path2checkpoints,
-        )
+        if (epoch + 1) % 50 == 0:
+            torch.save(
+                {
+                    "model": "ResNet50",
+                    "epoch": epoch,
+                    "model_state_dict": model.state_dict(),
+                    "optimizer_state_dict": optim.state_dict(),
+                    "loss": train_loss,
+                    "description": f"resnet50_checkpoint_{epoch}",
+                },
+                path2checkpoints,
+            )
 
     return model, loss_history, metric_history
 
