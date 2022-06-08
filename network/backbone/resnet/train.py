@@ -2,11 +2,9 @@ import os
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torchvision
 import matplotlib.pyplot as plt
 import numpy as np
 import time
-import copy
 
 from torchvision import utils
 from torchsummary import summary
@@ -16,9 +14,9 @@ from zmq import device
 from resnet import resnet34, resnet50
 from dataloader import data_transform, train_ds, val_ds
 
-USE_CUDA = torch.cuda.is_available()
-device = torch.device('cuda:0' if USE_CUDA else 'cpu')
-print('CUDA 사용 확인:', device)
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+if device == 'cpu':
+    print('Warnning: CPU로 학습할 시 속도가 많이 느림')
 model = resnet50().to(device)
 
 loss_func = nn.CrossEntropyLoss(reduction='sum')
@@ -122,7 +120,7 @@ def train_val(model, params):
         print('train loss: %.6f, val loss: %.6f, accuracy: %.2f, time: %.4f min' %(train_loss, val_loss, 100*val_metric, (time.time()-start_time)/60))
         print('-'*10)
         
-    if (epoch + 1) % 100 == 0:
+    if (epoch + 1) % 50 == 0:
         torch.save(
             {
                 "model": "ResNet50",
@@ -130,23 +128,22 @@ def train_val(model, params):
                 "model_state_dict": model.state_dict(),
                 "optimizer_state_dict": optim.state_dict(),
                 "loss": train_loss,
-                "description": f"resnet50_checkpoint_{checkpoint}",
+                "description": f"resnet50_checkpoint_{epoch}",
             },
             path2checkpoints,
         )
-        checkpoint += 1
 
     return model, loss_history, metric_history
 
 params_train = {
-    'num_epochs':1000,
+    'num_epochs':200,
     'optimizer':opt,
     'loss_func':loss_func,
     'train_dl':train_dl,
     'val_dl':val_dl,
     'sanity_check':False,
     'lr_scheduler':lr_scheduler,
-    'path2checkpoints':'./models/checkpoint_{checkpoint}.pt',
+    'path2checkpoints':'.\models\checkpoint_{epoch}.pt',
 }
 
 def createFolder(directory):
@@ -155,8 +152,8 @@ def createFolder(directory):
             os.makedirs(directory)
     except OSError:
         print('Error')
-createFolder('./models')
-createFolder('./graphs')
+createFolder('.\models')
+createFolder('.\graphs')
 
 model, loss_hist, metric_hist = train_val(model, params_train)
 
@@ -168,7 +165,7 @@ plt.plot(range(1,num_epochs+1),loss_hist["val"],label="val")
 plt.ylabel("Loss")
 plt.xlabel("Training Epochs")
 plt.legend()
-plt.savefig("./graphs/Train-val_Loss_graph.png")
+plt.savefig(".\graphs\Train-val_Loss_graph.png")
 
 plt.title("Train-Val Accuracy")
 plt.plot(range(1,num_epochs+1),metric_hist["train"],label="train")
@@ -176,4 +173,4 @@ plt.plot(range(1,num_epochs+1),metric_hist["val"],label="val")
 plt.ylabel("Accuracy")
 plt.xlabel("Training Epochs")
 plt.legend()
-plt.savefig("./graphs/Train-val_Accuracy_graph.png")
+plt.savefig(".\graphs\Train-val_Accuracy_graph.png")

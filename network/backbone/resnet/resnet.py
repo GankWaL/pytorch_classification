@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from utils import conv3x3, conv1x1, getPadding
-from blocks import BasicBlock, BottleNeck
+from utils import *
+from blocks import *
 
 class ResNet(nn.Module):
     def __init__(
@@ -28,13 +28,15 @@ class ResNet(nn.Module):
         if replace_stride_with_dilation is None:
             replace_stride_with_dilation = [False, False, False]
         if len(replace_stride_with_dilation) != 3:
-            raise ValueError("replace_stride_with_dilation은 None이여야합니다." "또는 3요소 튜플{}로 취해짐".format(replace_stride_with_dilation))
+            raise ValueError("replace_stride_with_dilation는 반드시 None이여야 합니다" "또는 3-element tuple{}이여야 합니다.".format(replace_stride_with_dilation))
         self.groups = groups
         self.base_width = width_per_group
         self.conv1 = nn.Conv2d(3, self.inplanes, kernel_size = 7, stride = 2, padding = 3, bias = False)
+        print("conv1 padding : ", self.conv1.padding)
         self.bn1 = norm_layer(self.inplanes)
         self.relu = nn.ReLU(inplace = True)
         self.maxpool = nn.MaxPool2d(kernel_size = 3, stride = 2, padding = 1)
+        print("maxpool padding : ", self.maxpool.padding)
         self.layer1 = self._make_layer(block, 64, layers[0])
         self.layer2 = self._make_layer(block, 128, layers[1], stride = 2, dilate = replace_stride_with_dilation[0])
         self.layer3 = self._make_layer(block, 256, layers[2], stride = 2, dilate = replace_stride_with_dilation[1])
@@ -112,3 +114,6 @@ def resnet50():
 
 def resnet101():
     return _resnet('resnet101', BottleNeck, [3, 4, 23, 3])
+
+if __name__ == "__main__":
+    resnet50()
